@@ -1,0 +1,12 @@
+# 核心依赖 (去掉 == 具体版本号)
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+aiofiles
+jinja2
+python-dotenv
+
+# 打包工具
+# PyInstaller 在 Python 3.14 下需要使用最新版
+pyinstaller

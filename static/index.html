@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptUI——漫画提示词生成器</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 漫画提示词生成器</h1>
+            <p>将文本一键转化为漫画提示词</p>
+        </header>
+
+        <main>
+            <div class="input-section card">
+                <h2>📝 输入文本</h2>
+                <textarea id="inputText" placeholder="粘贴或输入文本...">支持离婚！男方是巨婴，不做家务不带孩子。但他给了40万补偿金...</textarea>
+                
+                <div class="toolbar">
+                    <button id="loadFileBtn" class="btn">📂 加载文件</button>
+                    <button id="clearBtn" class="btn">🗑️ 清空</button>
+                    <input type="file" id="fileInput" accept=".txt,.md" style="display: none;">
+                </div>
+
+                <div class="stats" id="stats">
+                    <span>字数: <span id="charCount">0</span></span>
+                    <span>|</span>
+                    <span>分析中...</span>
+                </div>
+            </div>
+
+            <div class="config-section card">
+                <h2>⚙️ 生成配置</h2>
+                <div class="config-row">
+                    <label>模式：</label>
+                    <select id="modeSelect">
+                        <option value="auto">🔄 自动选择</option>
+                        <option value="algorithm">⚡ 算法模式</option>
+                        <option value="llm">🤖 LLM模式</option>
+                        <option value="hybrid">✨ 混合模式（推荐）</option>
+                    </select>
+                </div>
+
+                <div id="llmSettings" style="display:none; border-top: 1px dashed #ddd; margin-top:15px; padding-top:15px;">
+                    <h3 style="font-size: 14px; margin-bottom: 10px; color: #667eea;">🤖 模型配置</h3>
+                    <div class="config-row">
+                        <label>API地址：</label>
+                        <input type="text" id="llmApiBase" placeholder="默认: https://api.deepseek.com/v1">
+                    </div>
+                    <div class="config-row">
+                        <label>API Key：</label>
+                        <input type="password" id="llmApiKey" placeholder="sk-...">
+                    </div>
+                    <div class="config-row">
+                        <label>模型名称：</label>
+                        <input type="text" id="llmModel" placeholder="例如: deepseek-chat">
+                    </div>
+                    <div style="text-align: right;">
+                        <small style="color: #999; cursor: pointer;" onclick="saveLLMConfig()">💾 保存配置到浏览器</small>
+                    </div>
+                </div>
+                <div class="config-row">
+                    <label>面板数：</label>
+                    <input type="number" id="panelsInput" min="1" max="4" value="2">
+                </div>
+                <div class="config-row">
+                    <label>风格：</label>
+                    <select id="styleSelect">
+                        <option>清新简洁</option>
+                        <option>鲜艳活泼</option>
+                        <option>黑白线稿</option>
+                        <option>复古风格</option>
+                    </select>
+                </div>
+                <div class="config-row">
+                    <label>
+                        <input type="checkbox" id="sensitiveFilter" checked> 启用敏感词过滤
+                    </label>
+                </div>
+            </div>
+
+            <div class="action-section">
+                <button id="generateBtn" class="btn-primary">🎨 生成提示词</button>
+            </div>
+
+            <div class="output-section card" id="outputSection" style="display: none;">
+                <h2>✨ 生成的提示词</h2>
+                <div class="prompt-box">
+                    <pre id="promptOutput"></pre>
+                </div>
+                <div class="output-toolbar">
+                    <button id="copyBtn" class="btn">📋 复制</button>
+                    <button id="saveBtn" class="btn">💾 保存</button>
+                </div>
+            </div>
+
+            <div class="analysis-section card" id="analysisSection" style="display: none;">
+                <h2>📊 文本分析</h2>
+                <div id="analysisContent"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
