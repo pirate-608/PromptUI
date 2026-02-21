@@ -15,17 +15,16 @@ a = Analysis(
         # --- C 语言动态库映射 ---
         # 格式: (源路径, 目标文件夹)
         # 假设你已经编译好了 analyzer.dll
-        (os.path.join('c_modules', 'build', 'analyzer.dll'), 'c_modules'),
+        (os.path.join('build', 'analyzer.dll'), 'c_modules'),
     ],
     datas=[
         # --- 静态资源映射 ---
         # 格式: (源路径, 目标文件夹)
         ('static', 'static'),       # 前端代码
+        ('static/mappings', 'static/mappings'),  # 新增，递归包含所有mappings相关json
         ('app', 'app'),             # Python 后端代码 (防止 import 丢失)
-        
         # --- C 模块配套词典 ---
         (os.path.join('c_modules', 'dict'), 'dict'),
-        
         # --- 默认配置文件 ---
         # 如果你有 .env.example 或默认配置，可以在这里添加
     ],
@@ -72,7 +71,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='static/favicon/icon.ico' if os.path.exists('static/favicon/icon.ico') else None
+    icon='static/favicon/favicon.ico' if os.path.exists('static/favicon/favicon.ico') else None
 )
 
 coll = COLLECT(

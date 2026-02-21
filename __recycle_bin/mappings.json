@@ -1,0 +1,19 @@
+{
+    "mappings": {
+        "男方": "1boy, male focus, adult man",
+        "女方": "1girl, female focus, adult woman",
+        "巨婴": "giant baby concept, immature adult, childish, holding pacifier",
+        "家务": "doing housework, cleaning, apron, domestic",
+        "补偿金": "stack of money, cash, yuan bills, transaction",
+        "离婚": "divorce papers, broken marriage, arguing, separation",
+        "法院": "courtroom, judge, wooden gavel, legal atmosphere",
+        "支持": "thumbs up, cheering, supportive crowd",
+        "不做": "cross arms, rejecting, lazy, sleeping",
+        "孩子": "little child, toddler, cute"
+    },
+    "styles": {
+        "清新简洁": "masterpiece, best quality, flat color, anime style, simple background, bright",
+        "赛博朋克": "cyberpunk, neon lights, sci-fi, futuristic, dark atmosphere, glowing",
+        "水墨古风": "chinese traditional ink painting, watercolor, calligraphy brush, mountain landscape"
+    }
+}

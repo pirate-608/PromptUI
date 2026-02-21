@@ -1,11 +1,22 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PromptUI——漫画提示词生成器</title>
     <link rel="stylesheet" href="/static/style.css">
+
+    <!-- Favicon & App Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/x-icon" href="/static/favicon/favicon.ico">
+    <link rel="manifest" href="/static/favicon/site.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/favicon/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/static/favicon/android-chrome-512x512.png">
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -16,8 +27,15 @@
         <main>
             <div class="input-section card">
                 <h2>📝 输入文本</h2>
+                <div class="url-import-row" style="margin-bottom:10px;">
+                    <input type="text" id="urlInput" placeholder="粘贴网页URL..." style="width:70%;">
+                    <button id="importUrlBtn" class="btn">🌐 导入URL</button>
+                </div>
+                <div style="margin-bottom:10px; color:#b94a48; font-size:13px;">
+                    暂不支持代理服务，若有需求请自行配置系统代理。
+                </div>
                 <textarea id="inputText" placeholder="粘贴或输入文本...">支持离婚！男方是巨婴，不做家务不带孩子。但他给了40万补偿金...</textarea>
-                
+
                 <div class="toolbar">
                     <button id="loadFileBtn" class="btn">📂 加载文件</button>
                     <button id="clearBtn" class="btn">🗑️ 清空</button>
@@ -43,23 +61,36 @@
                     </select>
                 </div>
 
-                <div id="llmSettings" style="display:none; border-top: 1px dashed #ddd; margin-top:15px; padding-top:15px;">
+                <div id="llmSettings"
+                    style="display:none; border-top: 1px dashed #ddd; margin-top:15px; padding-top:15px;">
                     <h3 style="font-size: 14px; margin-bottom: 10px; color: #667eea;">🤖 模型配置</h3>
                     <div class="config-row">
                         <label>API地址：</label>
-                        <input type="text" id="llmApiBase" placeholder="默认: https://api.deepseek.com/v1">
+                        <input type="text" id="llmApiBase" placeholder="默认: http://localhost:11434/v1">
                     </div>
                     <div class="config-row">
-                        <label>API Key：</label>
+                        <label>API Key）：</label>
                         <input type="password" id="llmApiKey" placeholder="sk-...">
+                        <label>（若使用默认配置则无需填写，确保已安装ollama并拉取默认模型）</label>
                     </div>
                     <div class="config-row">
                         <label>模型名称：</label>
-                        <input type="text" id="llmModel" placeholder="例如: deepseek-chat">
+                        <input type="text" id="llmModel" placeholder="默认: llama3">
                     </div>
                     <div style="text-align: right;">
                         <small style="color: #999; cursor: pointer;" onclick="saveLLMConfig()">💾 保存配置到浏览器</small>
                     </div>
+                </div>
+                <div class="config-row">
+                    <label>目标语言：</label>
+                    <select id="langSelect">
+                        <option value="Chinese" selected>中文</option>
+                        <option value="English">英文</option>
+                        <option value="Japanese">日文</option>
+                        <option value="Korean">韩文</option>
+                        <option value="French">法文</option>
+                        <option value="German">德文</option>
+                    </select>
                 </div>
                 <div class="config-row">
                     <label>面板数：</label>
@@ -67,12 +98,7 @@
                 </div>
                 <div class="config-row">
                     <label>风格：</label>
-                    <select id="styleSelect">
-                        <option>清新简洁</option>
-                        <option>鲜艳活泼</option>
-                        <option>黑白线稿</option>
-                        <option>复古风格</option>
-                    </select>
+                    <select id="styleSelect"></select>
                 </div>
                 <div class="config-row">
                     <label>
@@ -105,4 +131,5 @@
 
     <script src="/static/script.js"></script>
 </body>
+
 </html>

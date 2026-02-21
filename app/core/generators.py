@@ -9,6 +9,7 @@ from .visual_mapper import VisualMapper
 # 加载环境变量
 load_dotenv()
 
+
 class PromptGenerator:
     def __init__(self, analyzer=None):
         self.analyzer = analyzer
@@ -18,17 +19,20 @@ class PromptGenerator:
             "api_base": os.getenv("LLM_API_BASE", "http://localhost:11434/v1"),
             "api_key": os.getenv("LLM_API_KEY", "ollama"),
             "model": os.getenv("LLM_MODEL", "llama3"),
-            "timeout": int(os.getenv("LLM_TIMEOUT", "30"))
+            "timeout": int(os.getenv("LLM_TIMEOUT", "30")),
         }
 
-    def generate(self, 
-                 text: str, 
-                 analysis: Dict[str, Any], 
-                 mode: str = "auto", 
-                 panels: int = 2, 
-                 style: str = "清新简洁", 
-                 sensitive_filter: bool = True,
-                 llm_config: Optional[Dict[str, str]] = None) -> str: # 新增参数
+    def generate(
+        self,
+        text: str,
+        analysis: Dict[str, Any],
+        mode: str = "auto",
+        panels: int = 2,
+        style: str = "清新简洁",
+        sensitive_filter: bool = True,
+        llm_config: Optional[Dict[str, str]] = None,
+        language: Optional[str] = None,
+    ) -> str:
         """
         :param llm_config: 前端传来的临时配置 {api_base, api_key, model}
         """
@@ -39,14 +43,29 @@ class PromptGenerator:
             clean_config = {k: v for k, v in llm_config.items() if v}
             current_config.update(clean_config)
 
+        # 语言集成：在 prompt 前加 Target language: ...
+        lang_prefix = f"Target language: {language}\n" if language else ""
         if mode == "llm":
-            return self._generate_by_llm(text, style, panels, current_config)
+            return lang_prefix + self._generate_by_llm(
+                text, style, panels, current_config
+            )
         elif mode == "hybrid":
-            return self._generate_hybrid(text, analysis, style, panels, current_config)
+            return lang_prefix + self._generate_hybrid(
+                text, analysis, style, panels, current_config
+            )
         else:
-            return self._generate_by_algorithm(text, analysis, style, panels, sensitive_filter)
+            return lang_prefix + self._generate_by_algorithm(
+                text, analysis, style, panels, sensitive_filter
+            )
 
-    def _generate_by_algorithm(self, text: str, analysis: Dict[str, Any], style: str, panels: int, sensitive_filter: bool) -> str:
+    def _generate_by_algorithm(
+        self,
+        text: str,
+        analysis: Dict[str, Any],
+        style: str,
+        panels: int,
+        sensitive_filter: bool,
+    ) -> str:
         """算法模式：基于统计和关键词映射 (离线、快速、稳定)"""
         prompt_parts = []
 
@@ -56,9 +75,9 @@ class PromptGenerator:
 
         # B. 内容映射 (取前15个高频词)
         top_words_data = analysis.get("top_words", [])
-        keywords = [item.get('word', '') for item in top_words_data[:15]]
+        keywords = [item.get("word", "") for item in top_words_data[:15]]
         visual_tags = self.mapper.map_keywords(keywords)
-        
+
         if visual_tags:
             prompt_parts.extend(visual_tags)
         else:
@@ -73,13 +92,14 @@ class PromptGenerator:
 
         # 组装
         final_prompt = ", ".join(filter(None, prompt_parts))
-        if panels > 1: final_prompt += " --ar 2:3"
-        
+        if panels > 1:
+            final_prompt += " --ar 2:3"
+
         return final_prompt
 
     def _generate_by_llm(self, text: str, style: str, panels: int, config: Dict) -> str:
         """LLM 模式：完全由大模型理解并生成"""
-        
+
         # 构造 System Prompt：教 AI 做 Stable Diffusion 的 Prompt Engineer
         system_prompt = (
             "You are an expert AI Art Prompt Generator. "
@@ -90,13 +110,13 @@ class PromptGenerator:
             "3. Structure: Style, Camera/Layout, Subject, Action, Environment, Quality.\n"
             "4. Include visual details (lighting, colors, expression).\n"
         )
-        
+
         # 构造 User Prompt
         style_tags = self.mapper.get_style_tags(style)
         panel_tags = self._get_panel_tags(panels)
-        
+
         user_prompt = (
-            f"Input Text: \"{text}\"\n\n"
+            f'Input Text: "{text}"\n\n'
             f"Requirements:\n"
             f"- Art Style: {style} (Tags: {style_tags})\n"
             f"- Layout: {panels} Panels Comic (Tags: {panel_tags})\n"
@@ -105,27 +125,32 @@ class PromptGenerator:
         )
 
         try:
-            return self._call_llm_api(system_prompt, user_prompt, config)
+            raw = self._call_llm_api(system_prompt, user_prompt, config)
+            return self._extract_prompt(raw)
         except Exception as e:
             # 降级处理
-            return f"LLM Error: {str(e)} (Switched to Algorithm)\n" + \
-                   self._generate_by_algorithm(text, {}, style, panels, True)
+            return (
+                f"LLM Error: {str(e)} (Switched to Algorithm)\n"
+                + self._generate_by_algorithm(text, {}, style, panels, True)
+            )
 
-    def _generate_hybrid(self, text: str, analysis: Dict[str, Any], style: str, panels: int, config: Dict) -> str:
+    def _generate_hybrid(
+        self, text: str, analysis: Dict[str, Any], style: str, panels: int, config: Dict
+    ) -> str:
         """混合模式：算法提取关键词 + LLM 润色组织"""
-        
+
         # 1. 先用算法提取关键词，作为“硬约束”喂给 LLM
         # 这样可以避免 LLM 遗漏文本中的关键实体
-        top_words = [w['word'] for w in analysis.get("top_words", [])[:10]]
+        top_words = [w["word"] for w in analysis.get("top_words", [])[:10]]
         keywords_str = ", ".join(top_words)
-        
+
         style_tags = self.mapper.get_style_tags(style)
         panel_tags = self._get_panel_tags(panels)
 
         system_prompt = "You are a helper optimizing AI art prompts. Keep the key entities provided."
-        
+
         user_prompt = (
-            f"Source Text: \"{text}\"\n"
+            f'Source Text: "{text}"\n'
             f"Key Entities Detected: [{keywords_str}]\n"
             f"Target Style: {style_tags}\n"
             f"Layout: {panel_tags}\n\n"
@@ -134,44 +159,68 @@ class PromptGenerator:
         )
 
         try:
-            return self._call_llm_api(system_prompt, user_prompt, config)
+            raw = self._call_llm_api(system_prompt, user_prompt, config)
+            return self._extract_prompt(raw)
         except Exception as e:
-            return f"Hybrid Error: {str(e)} (Fallback)\n" + \
-                   self._generate_by_algorithm(text, analysis, style, panels, True)
+            return f"Hybrid Error: {str(e)} (Fallback)\n" + self._generate_by_algorithm(
+                text, analysis, style, panels, True
+            )
 
-    def _call_llm_api(self, system_content: str, user_content: str, config: Dict) -> str:
+    def _extract_prompt(self, raw: str) -> str:
+        """
+        提取 LLM 返回内容中的纯 prompt 字符串：
+        - 优先提取英文引号内内容
+        - 若无引号，提取第一段英文逗号串
+        """
+        import re
+
+        # 提取英文引号内内容
+        m = re.search(r'"([^"]{10,})"', raw)
+        if m:
+            return m.group(1).strip()
+        # 提取第一段英文逗号串
+        lines = [l.strip() for l in raw.splitlines() if l.strip()]
+        for l in lines:
+            if "," in l and len(l) > 20:
+                return l
+        # 否则返回原始内容
+        return raw.strip()
+
+    def _call_llm_api(
+        self, system_content: str, user_content: str, config: Dict
+    ) -> str:
         """使用传入的 config 发送请求"""
         url = f"{config['api_base'].rstrip('/')}/chat/completions"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {config['api_key']}"
+            "Authorization": f"Bearer {config['api_key']}",
         }
-        
+
         payload = {
-            "model": config['model'],
+            "model": config["model"],
             "messages": [
                 {"role": "system", "content": system_content},
-                {"role": "user", "content": user_content}
+                {"role": "user", "content": user_content},
             ],
             "temperature": 0.7,
-            "stream": False
+            "stream": False,
         }
-        
+
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data, headers=headers)
-        
+
         try:
-            with urllib.request.urlopen(req, timeout=config['timeout']) as response:
+            with urllib.request.urlopen(req, timeout=config["timeout"]) as response:
                 if response.status != 200:
                     raise Exception(f"HTTP {response.status}")
-                    
+
                 body = response.read().decode("utf-8")
                 result = json.loads(body)
-                
+
                 # 解析 OpenAI 格式响应
                 content = result["choices"][0]["message"]["content"]
                 return content.strip()
-                
+
         except urllib.error.URLError as e:
             raise Exception(f"Connection failed: {e}")
         except KeyError:
@@ -183,6 +232,6 @@ class PromptGenerator:
             1: "solo, single view, movie still",
             2: "2koma, 2 panels, split view, top and bottom",
             3: "3koma, 3 panels, comic page",
-            4: "4koma, 4 panels, comic strip"
+            4: "4koma, 4 panels, comic strip",
         }
         return mapping.get(panels, "comic page, multiple views")

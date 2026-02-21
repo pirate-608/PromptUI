@@ -6,6 +6,11 @@ python-multipart
 aiofiles
 jinja2
 python-dotenv
+requests
+
+# 爬虫相关
+beautifulsoup4
+readability-lxml
 
 # 打包工具
 # PyInstaller 在 Python 3.14 下需要使用最新版

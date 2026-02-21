@@ -1,5 +1,10 @@
 .tmp.drivedownload/
 docs/
 build/
+build_py_temp/
+dict/
 dist/
 .env
+.tmp.driveupload/
+**/__pycache__/
+**/*.pyc
