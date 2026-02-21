@@ -1,123 +1,95 @@
 #!/bin/bash
+set -e
 
-# ==========================================
-# 初始化路径
-# ==========================================
-cd "$(dirname "$0")/.." || exit
-PROJECT_ROOT=$(pwd)
+# 获取脚本目录
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-echo "[INFO] Project Root: $PROJECT_ROOT"
-echo ""
+# 1. 检查环境
+if ! command -v python3 &>/dev/null; then echo "[ERROR] Python3 未安装"; exit 1; fi
+if ! command -v cmake &>/dev/null; then echo "[ERROR] CMake 未安装"; exit 1; fi
 
-# ==========================================
-# 1. 开发环境检查
-# ==========================================
-echo "[1/5] Checking Development Environment..."
-
-if ! command -v python3 &> /dev/null; then
-    echo "[ERROR] Python3 not found."
-    exit 1
-fi
-if ! command -v cmake &> /dev/null; then
-    echo "[ERROR] CMake not found."
-    exit 1
-fi
-if ! command -v gcc &> /dev/null; then
-    echo "[ERROR] GCC not found."
-    exit 1
-fi
-echo "[PASS] Environment checks passed."
-echo ""
-
-# ==========================================
-# 2. 环境变量文件 (.env) 自动生成
-# ==========================================
-echo "[2/5] Checking configuration (.env)..."
-
-if [ ! -f ".env" ]; then
-    echo "[WARN] .env not found. Starting interactive setup..."
-    echo ""
-    
-    # --- 修改开始：询问是否配置云端模型 ---
-    read -p "Do you want to configure a default cloud LLM provider? (y/n, default: n): " CONFIGURE_LLM
-    
-    if [[ "$CONFIGURE_LLM" == "y" || "$CONFIGURE_LLM" == "Y" ]]; then
-        read -p "Enter LLM_API_BASE (Default: https://api.deepseek.com/v1): " API_BASE
-        API_BASE=${API_BASE:-https://api.deepseek.com/v1}
-        
-        read -p "Enter LLM_API_KEY: " API_KEY
-        
-        read -p "Enter LLM_MODEL (Default: deepseek-chat): " MODEL
-        MODEL=${MODEL:-deepseek-chat}
-    fi
-    # --- 修改结束 ---
-    
-    # 开始写入文件
-    echo "# System" > .env
-    echo "HOST=127.0.0.1" >> .env
-    echo "PORT=8000" >> .env
-    echo "LLM_TIMEOUT=60" >> .env
-    echo "" >> .env
-    
-    if [[ "$CONFIGURE_LLM" == "y" || "$CONFIGURE_LLM" == "Y" ]]; then
-        echo "# LLM Configuration" >> .env
-        echo "LLM_API_BASE=$API_BASE" >> .env
-        echo "LLM_API_KEY=$API_KEY" >> .env
-        echo "LLM_MODEL=$MODEL" >> .env
-    else
-        echo "# LLM Configuration (Default: Ollama - Settings commented out)" >> .env
-        echo "# LLM_API_BASE=http://localhost:11434/v1" >> .env
-        echo "# LLM_API_KEY=ollama" >> .env
-        echo "# LLM_MODEL=llama3" >> .env
-    fi
-    
-    echo "[PASS] .env created successfully."
+# 2. 检查 .env
+ENV_PATH="$PROJECT_ROOT/.env"
+if [ ! -f "$ENV_PATH" ]; then
+cat > "$ENV_PATH" <<EOF
+# System
+HOST=127.0.0.1
+PORT=8000
+LLM_TIMEOUT=60
+# LLM Configuration (Default: Ollama)
+# LLM_API_BASE=http://localhost:11434/v1
+# LLM_API_KEY=ollama
+# LLM_MODEL=llama3
+EOF
+    echo "[INFO] Generated default .env"
 else
-    echo "[PASS] .env exists. Skipping generation."
+    echo "[PASS] .env exists."
 fi
-echo ""
 
-# ==========================================
-# 3. 编译 C 语言模块
-# ==========================================
-echo "[3/5] Building C Modules..."
+# 3. 构建 C 模块
+CMAKE_BUILD_DIR="$PROJECT_ROOT/build"
+mkdir -p "$CMAKE_BUILD_DIR"
+cd "$CMAKE_BUILD_DIR"
+if [ -f "CMakeCache.txt" ]; then rm -f CMakeCache.txt; fi
+cmake ../c_modules -DCMAKE_BUILD_TYPE=Release
+make
 
-cd c_modules || exit
-mkdir -p build
-cd build || exit
+# 检查并修正 analyzer.so/analyzer.dll 命名
+DLL_TARGET="$CMAKE_BUILD_DIR/analyzer.so"
+DLL_SOURCE_LIB="$CMAKE_BUILD_DIR/libanalyzer.so"
+if [ -f "$DLL_TARGET" ]; then
+    echo "[PASS] Found $DLL_TARGET"
+elif [ -f "$DLL_SOURCE_LIB" ]; then
+    echo "[INFO] Found libanalyzer.so, renaming to analyzer.so..."
+    cp "$DLL_SOURCE_LIB" "$DLL_TARGET"
+    [ -f "$DLL_TARGET" ] && echo "[PASS] Renamed successfully." || { echo "[ERROR] Rename failed."; exit 1; }
+else
+    echo "[ERROR] 未找到 analyzer.so 或 libanalyzer.so，请检查 CMake 构建输出。"; exit 1
+fi
+cd "$PROJECT_ROOT"
 
-echo "Configuring CMake..."
-cmake ..
+# 4. 安装依赖
+VENV_PATH="$PROJECT_ROOT/.venv"
+if [ ! -d "$VENV_PATH" ]; then
+    echo "[INFO] Creating venv..."
+    python3 -m venv "$VENV_PATH"
+fi
+source "$VENV_PATH/bin/activate"
+pip install --upgrade pip
+pip install -r "$PROJECT_ROOT/requirements.txt"
 
-echo "Compiling..."
-cmake --build . --config Release
-
-cd "$PROJECT_ROOT" || exit
-echo "[PASS] C Modules built successfully."
-echo ""
-
-# ==========================================
-# 4. 安装 Python 依赖
-# ==========================================
-echo "[4/5] Installing Python Dependencies..."
-python3 -m pip install -r requirements.txt
-echo "[PASS] Dependencies installed."
-echo ""
-
-# ==========================================
 # 5. PyInstaller 打包
-# ==========================================
-echo "[5/5] Packaging with PyInstaller..."
+DIST_PATH="$PROJECT_ROOT/dist"
+PY_WORK_DIR="$PROJECT_ROOT/build_py_temp"
+rm -rf "$DIST_PATH" "$PY_WORK_DIR"
+if [ ! -f "$PROJECT_ROOT/build.spec" ]; then echo "[ERROR] build.spec not found!"; exit 1; fi
+pyinstaller "$PROJECT_ROOT/build.spec" --clean --noconfirm --workpath "$PY_WORK_DIR" --distpath "$DIST_PATH"
 
-rm -rf dist build
+# 拷贝 static
+STATIC_SRC="$PROJECT_ROOT/static"
+STATIC_DST="$DIST_PATH/PromptUI/static"
+if [ -d "$STATIC_SRC" ]; then
+    cp -r "$STATIC_SRC" "$STATIC_DST"
+    echo "[INFO] Copied static directory to dist/PromptUI/static"
+else
+    echo "[WARN] static directory not found, skipping copy."
+fi
 
-pyinstaller build.spec --clean --noconfirm
+# 拷贝 dict
+DICT_SRC="$PROJECT_ROOT/dict"
+DICT_DST="$DIST_PATH/PromptUI/dict"
+if [ -d "$DICT_SRC" ]; then
+    cp -r "$DICT_SRC" "$DICT_DST"
+    echo "[INFO] Copied dict directory to dist/PromptUI/dict"
+else
+    echo "[WARN] dict directory not found, skipping copy."
+fi
 
-echo "Copying .env to dist directory..."
-cp .env dist/PromptUI/.env
+# 拷贝 .env
+cp "$ENV_PATH" "$DIST_PATH/PromptUI/.env"
 
-echo ""
-echo "=========================================="
+# 完成
+EXE="$DIST_PATH/PromptUI/PromptUI"
 echo "[SUCCESS] Build Complete!"
-echo "Executable: $PROJECT_ROOT/dist/PromptUI/PromptUI"
-echo "=========================================="
+echo "Location: $EXE"
