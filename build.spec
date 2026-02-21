@@ -13,9 +13,9 @@ a = Analysis(
     pathex=[PROJECT_DIR],
     binaries=[
         # --- C 语言动态库映射 ---
-        # 格式: (源路径, 目标文件夹)
-        # 假设你已经编译好了 analyzer.dll
+        # Windows: analyzer.dll，Unix: analyzer.so
         (os.path.join('build', 'analyzer.dll'), 'c_modules'),
+        (os.path.join('build', 'analyzer.so'), 'c_modules'),
     ],
     datas=[
         # --- 静态资源映射 ---
