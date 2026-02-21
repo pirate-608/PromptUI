@@ -7,7 +7,8 @@ param()
 # 先获取脚本目录，避免变量为 null
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-$envPath = Join-Path $ScriptDir '..' | Join-Path '.env'
+# 正确嵌套 Join-Path，避免管道错误
+$envPath = Join-Path (Join-Path $ScriptDir '..') '.env'
 # 自动读取 .env 并将 GCC_PATH 加入 PATH
 if (Test-Path $envPath) {
     $lines = Get-Content $envPath | Where-Object { $_ -match '^GCC_PATH=' }
