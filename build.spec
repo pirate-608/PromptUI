@@ -16,7 +16,9 @@ block_cipher = None
 # 确保 PyInstaller 能找到你的源代码
 PROJECT_DIR = os.getcwd()
 
-    a = Analysis(
+PROJECT_DIR = os.getcwd()
+
+a = Analysis(
     ['run.py'],  # 入口文件
     pathex=[PROJECT_DIR],
     binaries=binaries,
