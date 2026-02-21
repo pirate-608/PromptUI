@@ -13,9 +13,11 @@ a = Analysis(
     pathex=[PROJECT_DIR],
     binaries=[
         # --- C 语言动态库映射 ---
-        # Windows: analyzer.dll，Unix: analyzer.so
+        # Windows: analyzer.dll，Linux: analyzer.so/libanalyzer.so，macOS: libanalyzer.dylib
         (os.path.join('build', 'analyzer.dll'), 'c_modules'),
         (os.path.join('build', 'analyzer.so'), 'c_modules'),
+        (os.path.join('build', 'libanalyzer.so'), 'c_modules'),
+        (os.path.join('build', 'libanalyzer.dylib'), 'c_modules'),
     ],
     datas=[
         # --- 静态资源映射 ---
