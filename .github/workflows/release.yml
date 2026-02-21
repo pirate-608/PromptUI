@@ -37,6 +37,7 @@ jobs:
         uses: egor-tensin/setup-mingw@v2
         with:
           platform: x64
+        continue-on-error: true
 
       - name: Build with PowerShell (Windows)
         if: matrix.os == 'windows-latest'
