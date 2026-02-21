@@ -35,17 +35,17 @@ if [ -f "CMakeCache.txt" ]; then rm -f CMakeCache.txt; fi
 cmake ../c_modules -DCMAKE_BUILD_TYPE=Release
 make
 
-# 检查并修正 analyzer.so/analyzer.dll 命名
 DLL_TARGET="$CMAKE_BUILD_DIR/analyzer.so"
 DLL_SOURCE_LIB="$CMAKE_BUILD_DIR/libanalyzer.so"
+DLL_SOURCE_DYLIB="$CMAKE_BUILD_DIR/libanalyzer.dylib"
 if [ -f "$DLL_TARGET" ]; then
     echo "[PASS] Found $DLL_TARGET"
 elif [ -f "$DLL_SOURCE_LIB" ]; then
-    echo "[INFO] Found libanalyzer.so, renaming to analyzer.so..."
-    cp "$DLL_SOURCE_LIB" "$DLL_TARGET"
-    [ -f "$DLL_TARGET" ] && echo "[PASS] Renamed successfully." || { echo "[ERROR] Rename failed."; exit 1; }
+    echo "[PASS] Found $DLL_SOURCE_LIB"
+elif [ -f "$DLL_SOURCE_DYLIB" ]; then
+    echo "[PASS] Found $DLL_SOURCE_DYLIB"
 else
-    echo "[ERROR] 未找到 analyzer.so 或 libanalyzer.so，请检查 CMake 构建输出。"; exit 1
+    echo "[ERROR] 未找到 analyzer.so、libanalyzer.so 或 libanalyzer.dylib，请检查 CMake 构建输出。"; exit 1
 fi
 cd "$PROJECT_ROOT"
 
