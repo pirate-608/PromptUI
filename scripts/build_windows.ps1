@@ -126,7 +126,10 @@ if (-not (Test-Path $venvPath)) {
     python -m venv $venvPath
 }
 $venvPython = Join-Path $venvPath 'Scripts\python.exe'
-& $venvPython -m pip install -r (Join-Path $PROJECT_ROOT 'requirements.txt') | Out-Null
+# 升级 pip，单独安装关键包，确保 PyInstaller/readability/bs4 可用
+& $venvPython -m pip install --upgrade pip
+& $venvPython -m pip install PyInstaller readability-lxml beautifulsoup4
+& $venvPython -m pip install -r (Join-Path $PROJECT_ROOT 'requirements.txt')
 
 # ==========================================
 # 5. PyInstaller 打包
